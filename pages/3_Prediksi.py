@@ -21,7 +21,12 @@ def load_data():
 
 df = load_data()
 
-# --- Preprocessing (Sama seperti halaman 2) ---
+# Normalisasi nilai Jenis Kelamin agar konsisten
+df["Jenis Kelamin"] = df["Jenis Kelamin"].str.strip().str.lower()
+jenis_kelamin_radio = st.radio("Jenis Kelamin", ("Laki-laki", "Perempuan"))
+jk_input = jenis_kelamin_radio.strip().lower()
+
+# --- Preprocessing ---
 le_gender = LabelEncoder()
 df["Jenis Kelamin"] = le_gender.fit_transform(df["Jenis Kelamin"])
 
@@ -31,27 +36,25 @@ df["Status Gizi"] = le_status.fit_transform(df["Status Gizi"])
 X = df[["Umur (bulan)", "Tinggi Badan (cm)", "Jenis Kelamin"]]
 y = df["Status Gizi"]
 
-# --- Latih model ulang (bisa juga dipisahkan jadi .pkl) ---
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X, y)
 
-# --- Formulir Input User ---
 st.subheader("Masukkan Data Balita:")
-
 umur = st.slider("Umur (bulan)", 0, 60, 24)
 tinggi = st.number_input("Tinggi Badan (cm)", min_value=30.0, max_value=130.0, value=75.0)
-jenis_kelamin = st.radio("Jenis Kelamin", ("Laki-laki", "Perempuan"))
 
-# Konversi input ke bentuk model
-jk_encoded = le_gender.transform([jenis_kelamin])[0]
-data_input = pd.DataFrame({
-    "Umur (bulan)": [umur],
-    "Tinggi Badan (cm)": [tinggi],
-    "Jenis Kelamin": [jk_encoded]
-})
+# Konversi input
+try:
+    jk_encoded = le_gender.transform([jk_input])[0]
+    data_input = pd.DataFrame({
+        "Umur (bulan)": [umur],
+        "Tinggi Badan (cm)": [tinggi],
+        "Jenis Kelamin": [jk_encoded]
+    })
 
-# --- Prediksi ---
-if st.button("Prediksi"):
-    pred = model.predict(data_input)[0]
-    hasil = le_status.inverse_transform([pred])[0]
-    st.success(f"Prediksi Status Gizi: *{hasil}*")
+    if st.button("Prediksi"):
+        pred = model.predict(data_input)[0]
+        hasil = le_status.inverse_transform([pred])[0]
+        st.success(f"Prediksi Status Gizi: *{hasil}*")
+except ValueError as e:
+    st.error("Gagal mengenali nilai jenis kelamin. Pastikan nilainya sesuai dengan data.")
